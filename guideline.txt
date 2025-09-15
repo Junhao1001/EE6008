@@ -1,0 +1,31 @@
+整体架构：
+face_login_system/                  # 项目根目录（PyCharm中创建的项目名）
+├── main.py                         # 程序入口（启动文件）
+├── requirements.txt                # 项目依赖库清单
+├── .gitignore                      # Git版本控制忽略文件（可选）
+│
+├── core/                           # 核心功能模块
+│   ├── __init__.py                 # 标识为Python包（必须）
+│   ├── face_detector.py            # 人脸检测功能
+│   ├── face_recognizer.py          # 人脸识别与比对功能
+│   └── login_manager.py            # 登录逻辑控制
+│
+├── config/                         # 配置文件目录
+│   ├── __init__.py
+│   ├── settings.py                 # 系统参数（如摄像头ID、阈值）
+│   └── paths.py                    # 路径配置（如数据存储位置）
+│
+├── data/                           # 数据存储目录
+│   ├── __init__.py
+│   ├── user_database.py            # 用户信息管理（用户名、人脸特征）
+│   └── face_samples/               # 人脸样本图片库（注册用户的人脸图片）
+│
+├── utils/                          # 工具函数目录
+│   ├── __init__.py
+│   ├── image_utils.py              # 图像处理工具（裁剪、缩放等）
+│   └── logger.py                   # 日志记录工具
+│
+└── tests/                          # 测试代码目录
+    ├── __init__.py
+    ├── test_detector.py            # 测试人脸检测功能
+    └── test_login.py               # 测试登录流程
