@@ -1,0 +1,2 @@
+# 人脸匹配阈值
+FACE_MATCHING_THRESHOLD = 0.8

@@ -31,21 +31,28 @@ class FaceRecorder:
             # 提取特征向量
             embedding = face.normed_embedding
 
-            # 保存到数据库
-            self.face_database.face_data[name] = embedding
+            # 检测数据库中已有类似人脸注册
+            max_similarity, identity = self.face_database.compare_faces(embedding)
 
-            # 保存人脸图像
-            bbox = face.bbox.astype(int)
-            face_img = frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            face_filename = os.path.join(self.face_database.save_dir, f"{name}_{timestamp}.jpg")
-            cv2.imwrite(face_filename, face_img)
+            if max_similarity == 0:
+                # 保存到数据库
+                self.face_database.face_data[name] = embedding
 
-            # 保存数据到文件
-            self.face_database.save_faces()
+                # 保存人脸图像
+                bbox = face.bbox.astype(int)
+                face_img = frame[bbox[1]:bbox[3], bbox[0]:bbox[2]]
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                face_filename = os.path.join(self.face_database.save_dir, f"{name}_{timestamp}.jpg")
+                cv2.imwrite(face_filename, face_img)
 
-            print(f"成功注册: {name}")
-            return True
+                # 保存数据到文件
+                self.face_database.save_faces()
+
+                print(f"成功注册: {name}")
+                return True
+            else:
+                print(f"当前人脸已被注册，用户为{identity}")
+                return False
 
     def run(self):
         """运行主程序"""
@@ -82,7 +89,7 @@ class FaceRecorder:
                     cv2.circle(frame, tuple(landmark), 2, (0, 0, 255), -1)  # 红色点
 
             # 显示已注册的人脸数量
-            cv2.putText(frame, f"已注册: {len(self.face_database.face_data)} 人", (10, 30),
+            cv2.putText(frame, f"Registered Number: {len(self.face_database.face_data)}", (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
             # 显示操作提示

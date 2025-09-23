@@ -39,9 +39,8 @@ class FaceDetector:
             faces = self.app.get(frame)
 
             if len(faces) == 0:
-                print("未检测到人脸，请调整位置")
-                # 显示帧率
-                cv2.putText(frame, f"Faces: {len(faces)}", (10, 30),
+                # 显示提示
+                cv2.putText(frame, "No face detected. Please adjust your position", (10, 30),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
                 # 显示图像
@@ -65,27 +64,15 @@ class FaceDetector:
                 # 获取特征向量
                 embedding = face.normed_embedding
 
-                # 初始化比较结果
-                max_similarity = 0
-                identity = "Unknown"
-
-                # 如果有数据库，可以进行人脸识别
-                if self.face_database.face_data:
-                    # 与数据库中的人脸进行比较
-                    for name, db_embedding in self.face_database.face_data.items():
-                        similarity = np.dot(embedding, db_embedding)
-
-                        if similarity > threshold:
-                            if similarity > max_similarity:
-                                max_similarity = similarity
-                                identity = name
+                # 获取比较结果
+                max_similarity, identity = self.face_database.compare_faces(embedding)
 
                 #显示识别结果
                 label = f"{identity} ({max_similarity:.2f})"
                 cv2.putText(frame, label, (bbox[0], bbox[1] - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-                # 显示帧率
+                # 显示检测人脸数量
                 cv2.putText(frame, f"Faces: {len(faces)}", (10, 30),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
