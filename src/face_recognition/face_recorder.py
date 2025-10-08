@@ -4,7 +4,7 @@ import os
 import numpy as np
 from insightface.app import FaceAnalysis
 from datetime import datetime
-from core.face_database import FaceDatabase
+from src.face_recognition.face_database import FaceDatabase
 from config.settings import REGISTER_SUCCESS, REGISTER_UNFINISHED, REGISTER_DUPLICATE
 
 class FaceRecorder:

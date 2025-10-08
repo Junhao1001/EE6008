@@ -69,3 +69,7 @@ class FaceDatabase:
 
         print(f"最大相似度为: {max_similarity:.4f}，对应姓名: {most_similar_name}")
         return max_similarity, most_similar_name
+
+    def show_names(self):
+        for name in self.face_data:
+            print(name)
