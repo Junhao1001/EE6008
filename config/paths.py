@@ -6,8 +6,12 @@ ROOT_DIR = Path(__file__).parent.parent
 # 活体检测模型目录
 LIVENESS_MODEL_PATH = ROOT_DIR / "model" / "anti_spoof_model" / "2.7_80x80_MiniFASNetV2.pth"
 
+# users data path
+USER_DATA_FILE = ROOT_DIR / "data" / "users_data.json"
+
 # 数据相关路径
-FACE_DATA_DIR = ROOT_DIR / "data"/ "face_samples"
+FACE_SAMPLE_DIR = ROOT_DIR / "data" / "face_samples"
+FACE_DATA_FILE = ROOT_DIR / "data" / "face_data.json"
 
 # 配置相关路径
 CONFIG_DIR = ROOT_DIR / "config"

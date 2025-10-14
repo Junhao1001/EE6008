@@ -1,5 +1,8 @@
+from datetime import time
+
 import cv2
 from insightface.app import FaceAnalysis
+
 from src.face_recognition.face_database import FaceDatabase
 from src.face_recognition.anti_spoof_predict import AntiSpoofPredict
 
@@ -15,6 +18,12 @@ class FaceDetector:
         self.liveness_model = AntiSpoofPredict()
 
     def run(self):
+        start = time.time()
+        last_detect_time = 0
+        detection_counts = 0
+        face_detection = False
+        username = None
+
         # 初始化摄像头
         cap = cv2.VideoCapture(0)  # 0表示默认摄像头
 
@@ -25,7 +34,7 @@ class FaceDetector:
         print("按 'q' 键退出程序")
 
         while True:
-            face_detection = False
+            current_time = time.time()
             # 读取一帧
             ret, frame = cap.read()
             if not ret:
@@ -40,11 +49,11 @@ class FaceDetector:
 
             if len(faces) == 0:
                 # 显示提示
-                cv2.putText(frame, "No face detected. Please adjust your position", (10, 30),
+                cv2.putText(frame, "No face detected. Please adjust your position", (250, 30),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
             else:
                 # 显示检测人脸数量
-                cv2.putText(frame, f"Faces: {len(faces)}", (10, 30),
+                cv2.putText(frame, f"Faces: {len(faces)}", (250, 30),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
                 # 获取最大的人脸（按面积计算）
@@ -52,11 +61,6 @@ class FaceDetector:
 
                 # 获取人脸边界框
                 bbox = face.bbox.astype(int)
-
-                # 绘制关键点
-                # landmarks = face.kps.astype(int)
-                # for landmark in landmarks:
-                #     cv2.circle(frame, tuple(landmark), 2, (0, 0, 255), -1)  # 红色点
 
                 #活体检测
                 is_real = self.liveness_model.predict(frame, bbox)
@@ -68,9 +72,13 @@ class FaceDetector:
                     # 获取比较结果
                     max_similarity, identity = self.face_database.compare_faces(embedding)
 
-                    if max_similarity > 0:
-                        face_detection = True
-                        print("检测到人脸，用户为:", identity)
+                    if max_similarity > 0 & (current_time - last_detect_time > 0.5):
+                        if not face_detection:
+                            detection_counts += 1
+                            last_detect_time = current_time
+                            username = identity
+                            if detection_counts > 5:
+                                face_detection = True
 
                     # 显示识别结果
                     label = f"{identity} ({max_similarity:.2f})"
@@ -92,7 +100,11 @@ class FaceDetector:
 
             # 检测到人脸就退出
             if face_detection:
-                cv2.waitKey(3000)
+                if current_time - last_detect_time > 2:
+                    break
+
+            if current_time - last_detect_time > 15:
+                print("Time Out!")
                 break
 
             # 按'q'退出
@@ -102,3 +114,5 @@ class FaceDetector:
         # 释放资源
         cap.release()
         cv2.destroyAllWindows()
+
+        return username

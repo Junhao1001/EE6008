@@ -1,7 +1,7 @@
 import os
 import json
 import numpy as np
-from config.paths import FACE_DATA_DIR
+from config.paths import FACE_SAMPLE_DIR, FACE_DATA_FILE
 from config.settings import FACE_MATCHING_THRESHOLD
 
 class FaceDatabase:
@@ -10,17 +10,19 @@ class FaceDatabase:
         self.face_data = {}
 
         # 创建保存人脸的文件夹
-        self.save_dir = FACE_DATA_DIR
-        # os.makedirs(self.save_dir, exist_ok=True)
+        self.save_dir = FACE_SAMPLE_DIR
+        self.face_data_file = FACE_DATA_FILE
 
         # 加载已存在的人脸数据
         self.load_faces()
 
     def load_faces(self):
         # 从文件加载已注册的人脸数据
-        data_file = os.path.join(self.save_dir, "face_data.json")
-        if os.path.exists(data_file):
-            with open(data_file, 'r') as f:
+        if not os.path.exists(self.face_data_file):
+            with open(self.face_data_file, 'w', encoding='utf-8') as f:
+                json.dump({}, f)
+        else:
+            with open(self.face_data_file, 'r') as f:
                 data = json.load(f)
                 # 将列表数据转换回numpy数组
                 for name, embedding_list in data.items():
@@ -29,10 +31,9 @@ class FaceDatabase:
 
     def save_faces(self):
         # 保存人脸数据到文件
-        data_file = os.path.join(self.save_dir, "face_data.json")
         # 将numpy数组转换为列表以便JSON序列化
         save_data = {name: embedding.tolist() for name, embedding in self.face_data.items()}
-        with open(data_file, 'w') as f:
+        with open(self.face_data_file, 'w') as f:
             json.dump(save_data, f)
         print(f"已保存 {len(self.face_data)} 个人脸数据")
 
@@ -50,7 +51,7 @@ class FaceDatabase:
         # 在当前数据库中查找和输入人脸特征最匹配的向量(需大于匹配阈值)，返回相似度和姓名
         if not self.face_data:
             print("人脸数据库为空，无法进行比对")
-            return 0.0, "Unknown"
+            return 0, "Unknown"
 
         # 初始化返回值
         max_similarity = 0
