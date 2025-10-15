@@ -1,8 +1,8 @@
-from datetime import time
-
+import time
 import cv2
 from insightface.app import FaceAnalysis
 
+from config.settings import FACE_MATCHING_THRESHOLD
 from src.face_recognition.face_database import FaceDatabase
 from src.face_recognition.anti_spoof_predict import AntiSpoofPredict
 
@@ -17,12 +17,12 @@ class FaceDetector:
 
         self.liveness_model = AntiSpoofPredict()
 
-    def run(self):
-        start = time.time()
+    def run(self,username):
+        start_time = time.time()
         last_detect_time = 0
         detection_counts = 0
         face_detection = False
-        username = None
+        identity_result = None
 
         # 初始化摄像头
         cap = cv2.VideoCapture(0)  # 0表示默认摄像头
@@ -70,13 +70,13 @@ class FaceDetector:
                     embedding = face.normed_embedding
 
                     # 获取比较结果
-                    max_similarity, identity = self.face_database.compare_faces(embedding)
+                    max_similarity, identity = self.face_database.compare_faces(embedding, FACE_MATCHING_THRESHOLD)
 
                     if max_similarity > 0 & (current_time - last_detect_time > 0.5):
                         if not face_detection:
                             detection_counts += 1
                             last_detect_time = current_time
-                            username = identity
+                            identity_result = identity
                             if detection_counts > 5:
                                 face_detection = True
 
@@ -103,7 +103,7 @@ class FaceDetector:
                 if current_time - last_detect_time > 2:
                     break
 
-            if current_time - last_detect_time > 15:
+            if current_time - start_time > 15:
                 print("Time Out!")
                 break
 
@@ -115,4 +115,7 @@ class FaceDetector:
         cap.release()
         cv2.destroyAllWindows()
 
-        return username
+        if identity_result == username:
+            return True
+        else:
+            return False

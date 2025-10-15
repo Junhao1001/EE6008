@@ -47,7 +47,7 @@ class FaceDatabase:
         else:
             print(f"未查询到姓名为{name}的人脸数据")
 
-    def compare_faces(self, input_embedding):
+    def compare_faces(self, input_embedding, threshold):
         # 在当前数据库中查找和输入人脸特征最匹配的向量(需大于匹配阈值)，返回相似度和姓名
         if not self.face_data:
             print("人脸数据库为空，无法进行比对")
@@ -56,7 +56,6 @@ class FaceDatabase:
         # 初始化返回值
         max_similarity = 0
         most_similar_name = "Unknown"
-        threshold = FACE_MATCHING_THRESHOLD
 
         for name, db_embedding in self.face_data.items():
             # 计算相似度

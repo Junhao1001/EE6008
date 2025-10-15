@@ -7,7 +7,7 @@ from datetime import datetime
 from insightface.app import FaceAnalysis
 from src.face_recognition.anti_spoof_predict import AntiSpoofPredict
 from src.face_recognition.face_database import FaceDatabase
-from config.settings import RegistionParam
+from config.settings import RegistionParam, REGISTER_FACE_MATCHING_THRESHOLD
 
 FACE_STATUS_VALID = 0
 FACE_STATUS_INVALID = 1
@@ -32,7 +32,7 @@ class FaceRecorder:
 
         if is_real & (face.det_score > self.param.confidence_threshold):
             embedding = face.normed_embedding
-            max_similarity, identity = self.face_database.compare_faces(embedding)
+            max_similarity, identity = self.face_database.compare_faces(embedding, REGISTER_FACE_MATCHING_THRESHOLD)
             if max_similarity == 0:
                 return FACE_STATUS_VALID
             else:
@@ -124,7 +124,6 @@ class FaceRecorder:
                 if face_valid == FACE_STATUS_VALID & (time.time() - last_collect_time > self.param.frame_interval):
                     # 提取特征向量
                     current_embedding = face.normed_embedding
-
 
                     # 更新有效帧时间戳
                     last_collect_time = time.time()
