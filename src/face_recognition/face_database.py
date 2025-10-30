@@ -44,8 +44,10 @@ class FaceDatabase:
             # 同步保存到本地文件中
             self.save_faces()
             print(f"成功删除姓名为{name}的人脸数据")
+            return True
         else:
             print(f"未查询到姓名为{name}的人脸数据")
+            return False
 
     def compare_faces(self, input_embedding, threshold):
         # 在当前数据库中查找和输入人脸特征最匹配的向量(需大于匹配阈值)，返回相似度和姓名

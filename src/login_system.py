@@ -8,9 +8,10 @@ from src.user_manage import UserManager
 
 # ===== 登录界面 =====
 class LoginWindow(tk.Frame):
-    def __init__(self, master, switch_to_menu):
+    def __init__(self, master, switch_to_menu, switch_to_success):
         super().__init__(master)
         self.switch_to_menu = switch_to_menu
+        self.switch_to_success = switch_to_success
         self.user_manager = UserManager()
         self.show_login_window()
 
@@ -26,6 +27,13 @@ class LoginWindow(tk.Frame):
 
         tk.Button(self, text="Login", width=15, command=self.login).pack(pady=10)
         tk.Button(self, text="Back to Menu", width=15, command=self.switch_to_menu).pack()
+
+    def show_success(self, username):
+        self.clear_frame()
+        frame = RegisterWindow(self.root, switch_to_menu=self.switch_to_menu)
+        frame.pack(fill="both", expand=True)
+        self.current_frame = frame
+
 
     def login(self):
         username = self.username_entry.get()
@@ -61,7 +69,25 @@ class LoginWindow(tk.Frame):
     def verify_fingerprint(self, username):
         "TODO"
         messagebox.showinfo("Info", "Finger verification.")
+        self.switch_to_success(username)
         return True
+
+class SuccessWindow(tk.Frame):
+    def __init__(self, master, username, switch_to_menu):
+        super().__init__(master)
+        self.username = username  # 接收登录成功的用户名
+        self.switch_to_menu = switch_to_menu  # 返回菜单的回调函数
+        self.show_success_window()  # 渲染界面
+
+    def show_success_window(self):
+        # 欢迎语（大字体突出）
+        tk.Label(self, text=f"Welcome, {self.username}!", font=("Arial", 20, "bold")).pack(pady=50)
+
+        # 登录成功提示
+        tk.Label(self, text="Login Successful!", font=("Arial", 14)).pack(pady=10)
+
+        # 可选：返回菜单按钮（按原有界面逻辑补充，方便操作）
+        tk.Button(self, text="Back to Menu", width=15, command=self.switch_to_menu).pack(pady=30)
 
 class RegisterWindow(tk.Frame):
     def __init__(self, master, switch_to_menu):
@@ -182,6 +208,7 @@ class ManageWindow(tk.Frame):
         super().__init__(master)
         self.switch_to_menu = switch_to_menu
         self.user_manager = UserManager()
+        self.face_data = FaceDatabase()
 
         self.show_manage_window()
 
@@ -205,6 +232,14 @@ class ManageWindow(tk.Frame):
         for user in self.user_manager.user_data:
             self.tree.insert("", tk.END, values=(user,))
 
+    def delete_user(self, username):
+        if not self.user_manager.delete_user(username):
+            return False
+        if not self.face_data.delete_faces(username):
+            return False
+        "补充删除指纹数据接口"
+        return True
+
     def delete_selected_user(self):
         selected_item = self.tree.selection()
         if not selected_item:
@@ -212,7 +247,7 @@ class ManageWindow(tk.Frame):
             return
         username = self.tree.item(selected_item[0], "values")[0]
         if messagebox.askyesno("Delete Confirm", f"Are you sure to delete {username}?"):
-            if self.user_manager.delete_user(username):
+            if self.delete_user(username):
                 messagebox.showinfo("Success", f"Delete User：{username} successfully.")
                 self.load_users()
             else:
@@ -250,7 +285,7 @@ class LoginSystem:
 
     def show_login(self):
         self.clear_frame()
-        frame = LoginWindow(self.root, switch_to_menu=self.show_main_menu)
+        frame = LoginWindow(self.root, switch_to_menu=self.show_main_menu, switch_to_success=self.show_success)
         frame.pack(fill="both", expand=True)
         self.current_frame = frame
 
@@ -264,6 +299,12 @@ class LoginSystem:
         self.root.geometry("400x350")
         self.clear_frame()
         frame = ManageWindow(self.root, switch_to_menu=self.show_main_menu)
+        frame.pack(fill="both", expand=True)
+        self.current_frame = frame
+
+    def show_success(self, username):
+        self.clear_frame()
+        frame = SuccessWindow(self.root, username, switch_to_menu=self.show_main_menu)
         frame.pack(fill="both", expand=True)
         self.current_frame = frame
 
