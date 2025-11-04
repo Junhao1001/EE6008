@@ -17,10 +17,14 @@ FACE_DATA_FILE = ROOT_DIR / "data" / "face_data.json"
 CONFIG_DIR = ROOT_DIR / "config"
 
 # 源代码路径
-SRC_DIR = ROOT_DIR / "sore"
+SRC_DIR = ROOT_DIR / "src"
 
 # 测试路径
 TESTS_DIR = ROOT_DIR / "tests"
 
-SAMPLE_IMAGES_DIR = ROOT_DIR / "data"/"face_samples"/"image_F1.jpg"
+# 示例图片
+SAMPLE_IMAGES_DIR = ROOT_DIR / "data" / "face_samples" / "image_F1.jpg"
 
+# 指纹样本库
+FINGERPRINT_DIR = ROOT_DIR / "data" / "fingerprints"
+FINGERPRINT_DIR.mkdir(parents=True, exist_ok=True)
