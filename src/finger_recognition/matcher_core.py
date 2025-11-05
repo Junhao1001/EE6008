@@ -2,10 +2,9 @@
 import os, tempfile, shutil
 from typing import Tuple
 
-# 优先走你已有的 fingerprint_core（更稳更强）
 _USE_INTERNAL_IDENTIFY = False
 try:
-    from fingerprint_core import identify_in_db_v2  # 你之前上传的文件里有
+    from fingerprint_core import identify_in_db_v2
     _USE_INTERNAL_IDENTIFY = True
 except Exception:
     _USE_INTERNAL_IDENTIFY = False

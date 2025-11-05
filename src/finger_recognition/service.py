@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 FingerprintService：统一封装“采一次图 → 注册样本 → 登录比对”
-底层直接调用你之前已稳定可用的 capture_core.py / matcher_core.py
+底层直接调用 capture_core.py / matcher_core.py
 """
 
 from pathlib import Path
