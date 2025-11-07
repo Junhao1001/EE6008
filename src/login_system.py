@@ -215,6 +215,14 @@ class LoginView(ttk.Frame):
         self.password = tk.StringVar()
         self.step_msg = tk.StringVar(value="")   # NEW: 登录流程提示
 
+        top = ttk.Frame(self, padding=(10, 8))
+        top.pack(fill="x")
+        ttk.Label(
+            top,
+            text="Welcome to the Multimodal \n Recognition System",
+            font=("Segoe UI", 16, "bold")
+        ).pack(anchor="center", pady=(0, 8))
+
         frm = ttk.LabelFrame(self, text="Sign In", padding=10, style="Card.TLabelframe")
         frm.pack(fill="both", expand=True, padx=10, pady=10)
 
@@ -516,7 +524,7 @@ class WelcomeView(ttk.Frame):
 # ---------------- App ----------------
 class App:
     def __init__(self):
-        self.root, self.tb = build_root("EE6008 Multimodal Login", "680x520", themename="flatly")
+        self.root, self.tb = build_root("EE6008 Multimodal Identity Recognition System", "680x520", themename="flatly")
         self.user_manager = UserManager()
         self.current_user = None
 
