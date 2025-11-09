@@ -1,38 +1,38 @@
 # capture_core.py
 # -*- coding: utf-8 -*-
 """
-ZK 指纹仪采图接口（保存 BMP；标准库实现）
-- 运行即开始尝试采集（无需按 Enter）
-- 通过回调/事件传递 UI 文本（ready/attempt/busy/retry/saved/error）
-- 保存位置：<脚本目录>/fptemp/
-- 文件名：YYYYMMDDHHMM.bmp（同分钟自动加 _1, _2 防重）
+ZK Fingerprint Device Image Capture Interface (Saves BMP; Standard Library Implementation)
+- Starts capture attempt immediately after running (no need to press Enter)
+- Passes UI text via callbacks/events (ready/attempt/busy/retry/saved/error)
+- Save location: <script directory>/fptemp/
+- File name: YYYYMMDDHHMM.bmp (automatically appends _1, _2 in the same minute to avoid duplication)
 """
 
 import os, sys, struct, time, ctypes as C
 from typing import Callable, Dict, Generator, Optional, Tuple
 
-# ========== 路径固定到脚本目录 ==========
+# ========== Fix path to script directory ==========
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 FP_TEMP_DIR = os.path.join(BASE_DIR, "fptemp")
 os.makedirs(FP_TEMP_DIR, exist_ok=True)
 
-# ========== DLL 载入 ==========
+# ========== DLL Loading ==========
 CANDIDATE_DLLS = ["libzkfp.dll", "zkfp.dll", "libzkfp_x64.dll", "zkfp_x64.dll"]
 
 def _load_dll():
-    last = None
+    last_error = None
     for name in CANDIDATE_DLLS:
         try:
             return C.WinDLL(name)
         except Exception as e:
-            last = e
-    raise OSError(f"无法加载指纹 DLL，请确认 DLL 文件名/路径及位数匹配。最后错误: {last}")
+            last_error = e
+    raise OSError(f"Failed to load fingerprint DLL. Please confirm the DLL filename/path and bitness match. Last error: {last_error}")
 
 zk = _load_dll()
 
-# ========== C 类型 & 函数原型 ==========
+# ========== C Types & Function Prototypes ==========
 HANDLE = C.c_void_p
 UINT   = C.c_uint
 INT    = C.c_int
@@ -53,23 +53,25 @@ zk.ZKFPM_GetParameters.restype  = INT
 zk.ZKFPM_AcquireFingerprintImage.argtypes = [HANDLE, U8P, UINT]
 zk.ZKFPM_AcquireFingerprintImage.restype  = INT
 
-# ========== 参数代码 ==========
+# ========== Parameter Codes ==========
 PARAM_IMG_W     = 1
 PARAM_IMG_H     = 2
 PARAM_IMG_BYTES = 106
 
-# ========== 辅助 ==========
+# ========== Helpers ==========
 def _get_param_int(hdev: HANDLE, code: int, nbytes: int = 4) -> int:
+    """Get parameter (integer type)"""
     buf = (C.c_ubyte * nbytes)()
     size = UINT(nbytes)
     ret = zk.ZKFPM_GetParameters(hdev, code, buf, C.byref(size))
     if ret != 0:
-        raise RuntimeError(f"GetParameters({code}) 失败, ret={ret}")
+        raise RuntimeError(f"GetParameters({code}) failed, ret={ret}")
     return int.from_bytes(bytes(buf[:size.value]), "little", signed=False)
 
 def _save_gray8_to_bmp(raw_bytes: bytes, w: int, h: int, out_path: str) -> None:
+    """Save 8-bit grayscale image to BMP format"""
     if len(raw_bytes) < w * h:
-        raise ValueError(f"原始数据不足：{len(raw_bytes)} < {w*h}")
+        raise ValueError(f"Insufficient raw data: {len(raw_bytes)} < {w*h}")
     row_stride = (w + 3) & ~3
     padding = row_stride - w
     pixel_array_size = row_stride * h
@@ -83,7 +85,7 @@ def _save_gray8_to_bmp(raw_bytes: bytes, w: int, h: int, out_path: str) -> None:
 
     palette = bytearray()
     for i in range(256):
-        palette += bytes([i, i, i, 0])  # BGRA
+        palette += bytes([i, i, i, 0])  # BGRA format
 
     dst = bytearray()
     for y in range(h - 1, -1, -1):
@@ -99,6 +101,7 @@ def _save_gray8_to_bmp(raw_bytes: bytes, w: int, h: int, out_path: str) -> None:
         f.write(dst)
 
 def _make_timestamp_bmp_path() -> str:
+    """Generate timestamped BMP path (avoids duplication in the same minute)"""
     ts = time.strftime("%Y%m%d%H%M")
     base = os.path.join(FP_TEMP_DIR, ts)
     path = base + ".bmp"
@@ -108,7 +111,7 @@ def _make_timestamp_bmp_path() -> str:
         i += 1
     return path
 
-# ========== 事件生成器 ==========
+# ========== Event Generator ==========
 def capture_fingerprint_bmp_iter(
     max_tries: int = 30,
     try_interval: float = 0.6,
@@ -120,9 +123,9 @@ def capture_fingerprint_bmp_iter(
         yield ("error", {"message": result["reason"]})
         return result
     try:
-        n = zk.ZKFPM_GetDeviceCount()
-        if n <= 0:
-            result = {"ok": False, "path": None, "reason": f"no device (count={n})"}
+        device_count = zk.ZKFPM_GetDeviceCount()
+        if device_count <= 0:
+            result = {"ok": False, "path": None, "reason": f"no device (count={device_count})"}
             yield ("error", {"message": result["reason"]})
             return result
 
@@ -134,54 +137,54 @@ def capture_fingerprint_bmp_iter(
         try:
             try:
                 img_bytes = _get_param_int(hdev, PARAM_IMG_BYTES)
-                w = _get_param_int(hdev, PARAM_IMG_W)
-                h = _get_param_int(hdev, PARAM_IMG_H)
+                width = _get_param_int(hdev, PARAM_IMG_W)
+                height = _get_param_int(hdev, PARAM_IMG_H)
             except Exception as e:
                 result = {"ok": False, "path": None, "reason": f"GetParameters error: {e}"}
                 yield ("error", {"message": result["reason"]})
                 return result
 
             buf = (C.c_ubyte * img_bytes)()
-            yield ("ready", {"message": f"device ready: {w}x{h}, bytes={img_bytes}"})
+            yield ("ready", {"message": f"device ready: {width}x{height}, bytes={img_bytes}"})
             if pre_settle_time > 0:
                 time.sleep(pre_settle_time)
 
-            last_ret = None
-            for i in range(1, max_tries + 1):
-                yield ("attempt", {"index": i, "max": max_tries})
-                ret = zk.ZKFPM_AcquireFingerprintImage(hdev, buf, C.c_uint(img_bytes))
-                last_ret = ret
+            last_return_code = None
+            for attempt in range(1, max_tries + 1):
+                yield ("attempt", {"index": attempt, "max": max_tries})
+                return_code = zk.ZKFPM_AcquireFingerprintImage(hdev, buf, C.c_uint(img_bytes))
+                last_return_code = return_code
 
-                if ret == 0:
-                    raw = bytes(buf)
-                    if len(raw) < w * h:
-                        result = {"ok": False, "path": None, "reason": f"payload too small {len(raw)}/{w*h}"}
+                if return_code == 0:
+                    raw_data = bytes(buf)
+                    if len(raw_data) < width * height:
+                        result = {"ok": False, "path": None, "reason": f"payload too small {len(raw_data)}/{width*height}"}
                         yield ("error", {"message": result["reason"]})
                         return result
-                    raw = raw[:w * h]
-                    out_path = _make_timestamp_bmp_path()
+                    raw_data = raw_data[:width * height]
+                    output_path = _make_timestamp_bmp_path()
                     try:
-                        _save_gray8_to_bmp(raw, w, h, out_path)
+                        _save_gray8_to_bmp(raw_data, width, height, output_path)
                     except Exception as e:
                         result = {"ok": False, "path": None, "reason": f"save bmp error: {e}"}
                         yield ("error", {"message": result["reason"]})
                         return result
-                    yield ("saved", {"path": out_path, "width": w, "height": h, "tries": i})
-                    return {"ok": True, "path": out_path, "width": w, "height": h, "tries": i}
+                    yield ("saved", {"path": output_path, "width": width, "height": height, "tries": attempt})
+                    return {"ok": True, "path": output_path, "width": width, "height": height, "tries": attempt}
 
-                elif ret == -12:
-                    yield ("busy", {"ret": ret})
-                elif ret == -8:
-                    yield ("retry", {"ret": ret})
+                elif return_code == -12:
+                    yield ("busy", {"ret": return_code})
+                elif return_code == -8:
+                    yield ("retry", {"ret": return_code})
                 else:
-                    result = {"ok": False, "path": None, "reason": f"AcquireFingerprintImage ret={ret}"}
+                    result = {"ok": False, "path": None, "reason": f"AcquireFingerprintImage ret={return_code}"}
                     yield ("error", {"message": result["reason"]})
                     return result
 
                 time.sleep(try_interval)
 
-            result = {"ok": False, "path": None, "reason": "max tries exceeded", "last_ret": last_ret}
-            yield ("error", {"message": result["reason"], "last_ret": last_ret})
+            result = {"ok": False, "path": None, "reason": "max tries exceeded", "last_ret": last_return_code}
+            yield ("error", {"message": result["reason"], "last_ret": last_return_code})
             return result
 
         finally:
@@ -189,7 +192,7 @@ def capture_fingerprint_bmp_iter(
     finally:
         zk.ZKFPM_Terminate()
 
-# ========== 回调式包装（修复：保证拿到 StopIteration.value） ==========
+# ========== Callback-based Wrapper (Fixed: Ensure getting StopIteration.value) ==========
 def capture_fingerprint_bmp(
     on_event: Optional[Callable[[str, Dict], None]] = None,
     max_tries: int = 30,
@@ -197,26 +200,26 @@ def capture_fingerprint_bmp(
     pre_settle_time: float = 1.2
 ) -> Dict:
     """
-    回调式包装：手动 next() 迭代生成器，确保拿到 StopIteration.value。
+    Callback-based wrapper: Manually iterate the generator with next() to ensure getting StopIteration.value.
     """
     gen = capture_fingerprint_bmp_iter(max_tries, try_interval, pre_settle_time)
     final_result = None
     try:
         while True:
             try:
-                ev, data = next(gen)
+                event, data = next(gen)
             except StopIteration as stop:
                 final_result = stop.value
                 break
             except Exception as e:
-                # 生成器本身抛出异常
+                # Handle exceptions thrown by the generator itself
                 return {"ok": False, "path": None, "reason": f"generator exception: {e}"}
 
             if on_event:
                 try:
-                    on_event(ev, data)
+                    on_event(event, data)
                 except Exception:
-                    # 回调异常不影响流程
+                    # Callback exceptions should not affect the main process
                     pass
 
     except Exception as e:

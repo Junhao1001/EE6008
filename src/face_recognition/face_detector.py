@@ -8,68 +8,68 @@ from src.face_recognition.anti_spoof_predict import AntiSpoofPredict
 
 class FaceDetector:
     def __init__(self):
-        # 初始化人脸分析应用
+        # Initialize face analysis application
         self.app = FaceAnalysis(name='buffalo_l')
-        self.app.prepare(ctx_id=-1)  # 使用GPU，如果使用CPU则设置为ctx_id=-1
+        self.app.prepare(ctx_id=-1)  # Use GPU; set ctx_id=-1 if using CPU
 
-        # 存储人脸特征向量的字典
+        # Dictionary to store face feature vectors
         self.face_database = FaceDatabase()
 
         self.liveness_model = AntiSpoofPredict()
 
-    def run(self,username):
+    def run(self, username):
         start_time = time.time()
         last_detect_time = 0
         detection_counts = 0
         face_detection = False
         identity_result = None
 
-        # 初始化摄像头
-        cap = cv2.VideoCapture(0)  # 0表示默认摄像头
+        # Initialize camera
+        cap = cv2.VideoCapture(0)  # 0 indicates the default camera
 
-        # 设置摄像头参数（可选）
+        # Set camera parameters (optional)
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-        print("按 'q' 键退出程序")
+        print("Press 'q' to exit the program")
 
         while True:
             current_time = time.time()
-            # 读取一帧
+            # Read a frame
             ret, frame = cap.read()
             if not ret:
-                print("无法获取视频帧")
+                print("Failed to get video frame")
                 break
 
-            # 水平翻转图像（镜像效果）
+            # Horizontally flip the image (mirror effect)
             frame = cv2.flip(frame, 1)
 
-            # 进行人脸检测和分析
+            # Perform face detection and analysis
             faces = self.app.get(frame)
 
             if len(faces) == 0:
-                # 显示提示
+                # Display prompt
                 cv2.putText(frame, "No face detected. Please adjust your position", (250, 30),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
             else:
-                # 显示检测人脸数量
+                # Display the number of detected faces
                 cv2.putText(frame, f"Faces: {len(faces)}", (250, 30),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
-                # 获取最大的人脸（按面积计算）
+                # Get the largest face (calculated by area)
                 face = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
 
-                # 获取人脸边界框
+                # Get face bounding box
                 bbox = face.bbox.astype(int)
 
-                #活体检测
+                # Liveness detection
                 is_real = self.liveness_model.predict(frame, bbox)
                 if is_real:
                     print("It's a real face")
-                    # 获取特征向量
+                    # Get feature vector
                     embedding = face.normed_embedding
 
-                    # 获取比较结果
+                    # Get comparison result
                     max_similarity, identity = self.face_database.compare_faces(embedding, FACE_MATCHING_THRESHOLD)
 
                     if max_similarity > 0 & (current_time - last_detect_time > 0.5):
@@ -80,38 +80,38 @@ class FaceDetector:
                             if detection_counts > 5:
                                 face_detection = True
 
-                    # 显示识别结果
+                    # Display recognition result
                     label = f"{identity} ({max_similarity:.2f})"
-                    color = (0, 255, 0)  # 绿色框
+                    color = (0, 255, 0)  # Green box
                 else:
                     print("It's a fake face")
                     label = f"Fake Face"
-                    color = (0, 0, 255) # 红色框
+                    color = (0, 0, 255) # Red box
 
-                # 绘制边界框
+                # Draw bounding box
                 cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
-                # 显示标签
+                # Display label
                 cv2.putText(frame, label, (bbox[0], bbox[1] - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-
-            # 显示图像
+            # Display image
             cv2.imshow('Real-time Face Detection', frame)
 
-            # 检测到人脸就退出
+            # Exit if face is detected
             if face_detection:
                 if current_time - last_detect_time > 2:
                     break
 
+            # Detection timeout
             if current_time - start_time > 15:
                 print("Time Out!")
                 break
 
-            # 按'q'退出
+            # Press 'q' to exit
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
-        # 释放资源
+        # Release resources
         cap.release()
         cv2.destroyAllWindows()
 

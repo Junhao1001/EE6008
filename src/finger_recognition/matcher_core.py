@@ -12,8 +12,8 @@ except Exception:
 def verify_fingerprint(live_img_path: str, enrolled_img_path: str,
                        threshold:int=15, ratio:float=0.8) -> Tuple[bool, str]:
     """
-    返回 (ok, message)
-    ok=True 表示通过；False 表示失败
+    Return (ok, message)
+    ok=True indicates pass; False indicates failure
     """
     if not os.path.exists(live_img_path):
         return False, f"live image not found: {live_img_path}"
@@ -21,7 +21,7 @@ def verify_fingerprint(live_img_path: str, enrolled_img_path: str,
         return False, f"enrolled image not found: {enrolled_img_path}"
 
     if _USE_INTERNAL_IDENTIFY:
-        # 把注册图当作一个“小数据库”
+        # Treat the enrolled image as a "mini database"
         tmpdir = tempfile.mkdtemp(prefix="fpdb_")
         try:
             dst = os.path.join(tmpdir, os.path.basename(enrolled_img_path))
@@ -35,7 +35,7 @@ def verify_fingerprint(live_img_path: str, enrolled_img_path: str,
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
     else:
-        # 退化：使用简易 SIFT 比对（依赖 opencv-contrib-python）
+        # Fallback: Use simple SIFT matching (depends on opencv-contrib-python)
         try:
             import cv2, numpy as np
         except Exception:

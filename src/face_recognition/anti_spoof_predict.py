@@ -11,33 +11,33 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from src.face_recognition.functional import to_tensor, CropImage, get_kernel, parse_model_name
-from src.face_recognition.MiniFASNet import MiniFASNetV1, MiniFASNetV2,MiniFASNetV1SE,MiniFASNetV2SE
+from src.face_recognition.MiniFASNet import MiniFASNetV1, MiniFASNetV2, MiniFASNetV1SE, MiniFASNetV2SE
 from config.settings import LivenessModelParam
 from config.paths import LIVENESS_MODEL_PATH
 
 MODEL_MAPPING = {
     'MiniFASNetV1': MiniFASNetV1,
     'MiniFASNetV2': MiniFASNetV2,
-    'MiniFASNetV1SE':MiniFASNetV1SE,
-    'MiniFASNetV2SE':MiniFASNetV2SE
+    'MiniFASNetV1SE': MiniFASNetV1SE,
+    'MiniFASNetV2SE': MiniFASNetV2SE
 }
 
 class AntiSpoofPredict:
     def __init__(self):
         self.device = torch.device("cpu")
 
-        # 加载模型
+        # Load model
         self._load_model(LIVENESS_MODEL_PATH)
         self.model.eval()
 
     def _load_model(self, model_path):
-        # define model
+        # Define model
         model_name = os.path.basename(model_path)
         h_input, w_input, model_type, _ = parse_model_name(model_name)
         self.kernel_size = get_kernel(h_input, w_input)
         self.model = MODEL_MAPPING[model_type](conv6_kernel=self.kernel_size).to(self.device)
 
-        # load model weight
+        # Load model weight
         state_dict = torch.load(model_path, map_location=self.device)
         keys = iter(state_dict)
         first_layer_name = keys.__next__()
@@ -53,23 +53,23 @@ class AntiSpoofPredict:
         return None
 
     def img_preprocess(self, img, bbox):
-        # 图像预处理
+        # Image preprocessing
         image_cropper = CropImage()
         param = LivenessModelParam()
 
-        # 图像裁剪至模型所需尺寸
+        # Crop image to the size required by the model
         img = image_cropper.crop(img, bbox, param.scale, param.out_width, param.out_height, True)
 
-        # 转换为Tensor
+        # Convert to Tensor
         dst_img = to_tensor(img)
         dst_img = dst_img.unsqueeze(0).to(self.device)
         return dst_img
 
     def predict(self, img, face_bbox):
-        # 图像预处理
+        # Image preprocessing
         input_img = self.img_preprocess(img, face_bbox)
 
-        # 预测结果
+        # Prediction result
         with torch.no_grad():
             result = self.model.forward(input_img)
             result = F.softmax(result).cpu().numpy()

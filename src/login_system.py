@@ -2,13 +2,13 @@
 """
 EE6008 Multimodal Login System - Single Window, View Switching (no top nav)
 - Views: Login / Register / Manage Users / Welcome
-- Default shows Login view; buttons在页面内跳转
+- Default shows Login view; buttons navigate within the page
 - Face: FaceRecorder.run (enroll), FaceDetector.run (verify)
 - Fingerprint: finger_recognition.capture_core + finger_recognition.matcher_core
-- Delete user: 同时删除指纹样本与人脸数据
-- UI: ttkbootstrap (自动降级到 Tk)
-- Register: 指纹采集按钮提示 + 10s 超时
-- Login: 分步提示 -> 账号密码通过后提示“进行人脸验证”；人脸通过后提示“进行指纹验证”
+- Delete user: Delete both fingerprint samples and face data simultaneously
+- UI: ttkbootstrap (automatically degrades to Tk)
+- Register: Fingerprint capture button hint + 10s timeout
+- Login: Step-by-step prompts -> After account password verification, prompt "Proceed to face verification"; after face verification, prompt "Proceed to fingerprint verification"
 """
 
 import os
@@ -36,11 +36,11 @@ except Exception:
     FACE_DATA_FILE = PROJECT_ROOT / "data" / "face_data.json"
     FACE_SAMPLE_DIR = PROJECT_ROOT / "data" / "face_samples"
 
-# 指纹核心
+# Fingerprint core
 from finger_recognition.capture_core import capture_fingerprint_bmp
 from finger_recognition import matcher_core
 
-# 主题助手
+# Theme helper
 from ui_theme import build_root
 
 # ---------------- Face modules ----------------
@@ -90,7 +90,7 @@ def face_verify(username: str):
         raise ImportError("FaceDetector not found.")
     return bool(FaceDetectorClass().run(username)), "FaceDetector.run"
 
-# 删除人脸记录（优先 FaceDatabase，失败走文件兜底）
+# Delete face records (prioritize FaceDatabase, fallback to file operation if failed)
 _FACE_DELETE_CANDIDATES = ["delete_faces", "remove_user", "delete_user", "remove_faces"]
 
 def _delete_face_via_db(username: str) -> bool:
@@ -112,7 +112,7 @@ def _delete_face_via_db(username: str) -> bool:
 
 def _delete_face_via_files(username: str) -> bool:
     changed = False
-    # 删样本目录
+    # Delete sample directory
     try:
         user_dir = FACE_SAMPLE_DIR / username
         if user_dir.exists():
@@ -120,7 +120,7 @@ def _delete_face_via_files(username: str) -> bool:
             changed = True
     except Exception:
         pass
-    # 清理 face_data.json
+    # Clean up face_data.json
     try:
         if FACE_DATA_FILE.exists():
             with open(FACE_DATA_FILE, "r", encoding="utf-8") as f:
@@ -213,7 +213,7 @@ class LoginView(ttk.Frame):
 
         self.username = tk.StringVar()
         self.password = tk.StringVar()
-        self.step_msg = tk.StringVar(value="")   # NEW: 登录流程提示
+        self.step_msg = tk.StringVar(value="")   # NEW: Login process prompt
 
         top = ttk.Frame(self, padding=(10, 8))
         top.pack(fill="x")
@@ -243,7 +243,7 @@ class LoginView(ttk.Frame):
         ttk.Button(btn_row, text="Manage Users", command=self.app.show_manage,
                    bootstyle="secondary").pack(side="left", padx=6)
 
-        # NEW: 流程提示
+        # NEW: Process prompt
         ttk.Label(frm, textvariable=self.step_msg, foreground="gray").grid(
             row=3, column=0, columnspan=2, sticky="w", padx=6, pady=(4,0)
         )
@@ -257,19 +257,19 @@ class LoginView(ttk.Frame):
         user = self.username.get().strip()
         pwd  = self.password.get().strip()
 
-        # 1) 账号密码校验
+        # 1) Account password verification
         if not self.user_manager.verify_user(user, pwd):
             self.step_msg.set("")
             messagebox.showerror("Failed", "Invalid username or password.")
             return
 
-        # 账号密码 OK → 提示进行人脸验证
+        # Account password OK → Prompt for face verification
         self.btn_login.configure(state="disabled")
         self.step_msg.set("Credentials verified. Next: face verification ...")
         self.update_idletasks()
         messagebox.showinfo("Next step", "Credentials verified.\nPlease look at the camera for face verification.")
 
-        # 2) 人脸验证
+        # 2) Face verification
         try:
             ok, msg = face_verify(user)
             if not ok:
@@ -283,12 +283,12 @@ class LoginView(ttk.Frame):
             messagebox.showerror("Error", f"Face verification error:\n{e}")
             return
 
-        # 人脸 OK → 提示进行指纹验证
+        # Face OK → Prompt for fingerprint verification
         self.step_msg.set("Face verified. Next: fingerprint verification ...")
         self.update_idletasks()
         messagebox.showinfo("Next step", "Face verified.\nPlease place your finger on the sensor.")
 
-        # 3) 指纹验证
+        # 3) Fingerprint verification
         try:
             from pathlib import Path as _P
             enrolled = self.user_manager.get_fingerprint_path(user)
@@ -301,7 +301,7 @@ class LoginView(ttk.Frame):
             ok, msg = self.svc.verify(_P(enrolled), threshold=15, ratio=0.8)
             if ok:
                 self.step_msg.set("Fingerprint verified. Logging in ...")
-                self.app.show_welcome(user)  # 进入欢迎页
+                self.app.show_welcome(user)  # Enter welcome page
             else:
                 self.step_msg.set("Fingerprint not matched.")
                 messagebox.showerror("Failed", f"Fingerprint not matched.\n{msg}")
@@ -324,7 +324,7 @@ class RegisterView(ttk.Frame):
         self.face_registered = tk.BooleanVar(value=False)
         self.fp_registered = tk.BooleanVar(value=False)
 
-        # 指纹提示 & 超时控制
+        # Fingerprint hint & timeout control
         self.fp_hint = tk.StringVar(value="")
         self._fp_running = False
         self._fp_timed_out = False
@@ -382,7 +382,7 @@ class RegisterView(ttk.Frame):
         except Exception as e:
             messagebox.showerror("Error", f"Face enrollment error:\n{e}")
 
-    # ----- 指纹注册：提示 + 10 秒超时 -----
+    # ----- Fingerprint registration: Hint + 10-second timeout -----
     def register_fingerprint(self):
         if self._fp_running:
             return

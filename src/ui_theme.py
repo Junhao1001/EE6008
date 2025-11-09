@@ -1,14 +1,14 @@
 # ui_theme.py
 """
-构建美观主题窗口，优先使用 ttkbootstrap；
-如果未安装则回退到标准 Tkinter。
+Build an aesthetically pleasing themed window, prioritize using ttkbootstrap;
+fall back to standard Tkinter if ttkbootstrap is not installed.
 """
 
 def build_root(app_title="EE6008 Multimodal Login", size="460x280", themename="flatly"):
     """
-    返回 (root, tb)
-    - root: Tk 或 ttkbootstrap.Window
-    - tb: ttkbootstrap 模块对象（可用于 bootstyle），若未安装则为 None
+    Return (root, tb)
+    - root: Tk or ttkbootstrap.Window
+    - tb: ttkbootstrap module object (usable for bootstyle), None if not installed
     """
     try:
         import ttkbootstrap as tb

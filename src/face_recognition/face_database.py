@@ -6,70 +6,70 @@ from config.settings import FACE_MATCHING_THRESHOLD
 
 class FaceDatabase:
     def __init__(self):
-        # 存储人脸特征向量的字典
+        # Dictionary to store face feature vectors
         self.face_data = {}
 
-        # 创建保存人脸的文件夹
+        # Create folder for saving face data
         self.save_dir = FACE_SAMPLE_DIR
         self.face_data_file = FACE_DATA_FILE
 
-        # 加载已存在的人脸数据
+        # Load existing face data
         self.load_faces()
 
     def load_faces(self):
-        # 从文件加载已注册的人脸数据
+        # Load registered face data from file
         if not os.path.exists(self.face_data_file):
             with open(self.face_data_file, 'w', encoding='utf-8') as f:
                 json.dump({}, f)
         else:
             with open(self.face_data_file, 'r') as f:
                 data = json.load(f)
-                # 将列表数据转换回numpy数组
+                # Convert list data back to numpy array
                 for name, embedding_list in data.items():
                     self.face_data[name] = np.array(embedding_list)
-            print(f"已加载 {len(self.face_data)} 个人脸数据")
+            print(f"Loaded {len(self.face_data)} face data entries")
 
     def save_faces(self):
-        # 保存人脸数据到文件
-        # 将numpy数组转换为列表以便JSON序列化
+        # Save face data to file
+        # Convert numpy arrays to lists for JSON serialization
         save_data = {name: embedding.tolist() for name, embedding in self.face_data.items()}
         with open(self.face_data_file, 'w') as f:
             json.dump(save_data, f)
-        print(f"已保存 {len(self.face_data)} 个人脸数据")
+        print(f"Saved {len(self.face_data)} face data entries")
 
     def delete_faces(self, name):
-        # 根据姓名删除人脸数据
+        # Delete face data by name
         if name in self.face_data:
             del self.face_data[name]
-            # 同步保存到本地文件中
+            # Synchronize and save to local file
             self.save_faces()
-            print(f"成功删除姓名为{name}的人脸数据")
+            print(f"Successfully deleted face data for {name}")
             return True
         else:
-            print(f"未查询到姓名为{name}的人脸数据")
+            print(f"No face data found for {name}")
             return False
 
     def compare_faces(self, input_embedding, threshold):
-        # 在当前数据库中查找和输入人脸特征最匹配的向量(需大于匹配阈值)，返回相似度和姓名
+        # Find the vector most matching the input face feature in the current database (must exceed the matching threshold), return similarity and name
         if not self.face_data:
-            print("人脸数据库为空，无法进行比对")
+            print("Face database is empty, cannot perform comparison")
             return 0, "Unknown"
 
-        # 初始化返回值
+        # Initialize return values
         max_similarity = 0
         most_similar_name = "Unknown"
 
         for name, db_embedding in self.face_data.items():
-            # 计算相似度
+            # Calculate similarity
             similarity = np.dot(input_embedding, db_embedding)
 
-            # 如果相似度大于阈值，则认为成功匹配
+            # If similarity exceeds the threshold, it is considered a successful match
             if similarity > threshold:
                 if similarity > max_similarity:
                     max_similarity = similarity
                     most_similar_name = name
 
-        print(f"最大相似度为: {max_similarity:.4f}，对应姓名: {most_similar_name}")
+        print(f"Maximum similarity: {max_similarity:.4f}, corresponding name: {most_similar_name}")
         return max_similarity, most_similar_name
 
     def show_names(self):
