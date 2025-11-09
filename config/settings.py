@@ -1,25 +1,25 @@
-# 人脸匹配阈值
-FACE_MATCHING_THRESHOLD = 0.7
-REGISTER_FACE_MATCHING_THRESHOLD = 0.7
+# Face matching threshold
+FACE_MATCHING_THRESHOLD = 0.5
+REGISTER_FACE_MATCHING_THRESHOLD = 0.5
 
-# 注册状态
+# Registration status
 REGISTER_FAIL = 0
 REGISTER_SUCCESS = 1
 REGISTER_DUPLICATE = 2
 
-# 活体检测模型图像尺寸
+# Liveness detection model image size
 class LivenessModelParam:
     scale = 2.7
     out_width = 80
     out_height = 80
 
-# 人脸注册相关参数
+# Face registration related parameters
 class RegistionParam:
-    # 需要收集的有效帧数量
+    # Number of valid frames to collect
     required_frames = 5
-    # 人脸检测置信度阈值
+    # Face detection confidence threshold
     confidence_threshold = 0.6
-    # 有效帧之间的最小时间间隔（second)
+    # Minimum time interval between valid frames (seconds)
     frame_interval = 0.5
-    # 检测的最长持续时间
+    # Maximum duration of detection (seconds)
     detection_time_limit = 10
